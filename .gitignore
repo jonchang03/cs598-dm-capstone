@@ -1,3 +1,5 @@
 yelp_dataset_challenge_academic_dataset/
 *.zip
 *.gz
+.ipynb_checkpoints
+.vscode/
