@@ -9,7 +9,7 @@ from joblib import dump, load
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
-
+server = app.server
 
 ### Load input options and model
 # df = pd.read_csv('https://plotly.github.io/datasets/country_indicators.csv')
