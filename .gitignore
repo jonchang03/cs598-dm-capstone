@@ -3,3 +3,8 @@ yelp_dataset_challenge_academic_dataset/
 *.gz
 .ipynb_checkpoints
 .vscode/
+task3/AutoPhrase/
+task3/SegPhrase/
+__pycache__
+data/categories/
+*/glove/*

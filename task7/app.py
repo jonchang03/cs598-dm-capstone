@@ -1,19 +1,19 @@
 import dash
 import dash_core_components as dcc
 import dash_html_components as html
-from dash.dependencies import Input, Output
+from dash.dependencies import Input, Output, State
 
 import pandas as pd
+from joblib import dump, load
 
 external_stylesheets = ['https://codepen.io/chriddyp/pen/bWLwgP.css']
 
 app = dash.Dash(__name__, external_stylesheets=external_stylesheets)
 
 
-### Input Options
+### Load input options and model
 # df = pd.read_csv('https://plotly.github.io/datasets/country_indicators.csv')
 # available_indicators = df['Indicator Name'].unique()
-
 # taken from the dataset
 unique_zipcodes = ['98118', '98109', '98103', '98112', '98102', '98107', '98105',
                     '98108', '98104', '98122', '98106', '98101', '98134', '98121',
@@ -34,6 +34,9 @@ unique_cuisines = ['Afghan', 'African', 'American (New)', 'American (Traditional
                     'Soul Food', 'Soup', 'Southern', 'Spanish', 'Steakhouses', 'Sushi Bars', 'Szechuan', 'Taiwanese', 
                     'Tapas Bars', 'Tapas/Small Plates', 'Tex-Mex', 'Thai', 'Trinidadian', 'Turkish', 'Vegan', 'Vegetarian', 
                     'Venezuelan', 'Vietnamese']
+# load serialized model
+serialize_path = './pipeline.joblib'
+pipeline_serialized = load(serialize_path) 
 
 app.layout = html.Div(children=[
     html.H1('Data Hygiene Prediction'), 
@@ -48,11 +51,11 @@ app.layout = html.Div(children=[
         ### Text Input
         html.I("Please enter your review of the restaurant in the text box."),
         html.Br(),
-        dcc.Input(
+        dcc.Textarea(
                 id="review_text", 
-                type="text", 
                 placeholder="Please type in your review here.",
-                style={'width': '67%', 'height': '100px', 'display': 'inline-block'},
+                value="Please type in your review here.",
+                style={'width': '67%', 'height': '100px'},
             ),
         html.Br(), html.Br(),
 
@@ -83,20 +86,12 @@ app.layout = html.Div(children=[
         html.I("Please enter your average rating for the restaurant."),
         dcc.RadioItems(
                 id='average_rating',
-                options=[{'label': i, 'value': i} for i in list(range(1,6))],
-                value=3,
+                options=[{'label': i, 'value': i} for i in ['1', '2', '3', '4', '5']],
+                value='3',
                 labelStyle={'display': 'inline-block'}
             ),
         html.Br(),
     ]),
-
-    # html.Div(
-    # [
-    #     html.I("Try typing in input 1 & 2, and observe how debounce is impacting the callbacks. Press Enter and/or Tab key in Input 2 to cancel the delay"),
-    #     html.Br(),
-    #     dcc.Input(id="input1", type="text", placeholder=""),
-    #     dcc.Input(id="input2", type="text", placeholder="", debounce=True),
-    # ]),
 
     html.Button(id='submit-button', n_clicks=0, children='Submit'),
 
@@ -108,14 +103,19 @@ app.layout = html.Div(children=[
 
 @app.callback(
     Output("output", "children"),
-    [Input("review_text", "value"), 
-     Input("cuisine_type", "value"),
-     Input("zipcode", "value"),
-     Input("average_rating", "value")],
+    [Input("submit-button", "n_clicks")], 
+     state=[State("review_text", "value"), 
+            State("cuisine_type", "value"),
+            State("zipcode", "value"),
+            State("average_rating", "value")],
 )
-def update_output(review_text, cuisine_type, zipcode, average_rating):
-    return u'Text: {} and Cuisine: {} and Zipcode: {} and Average Rating: {}'.format(review_text, cuisine_type, zipcode, average_rating)
-
+def update_output(n_clicks, review_text, cuisine_type, zipcode, average_rating):
+    cuisine_type = str(cuisine_type) # need to convert list to string
+    data = [[review_text, cuisine_type, zipcode, average_rating]]
+    input_df = pd.DataFrame(data, columns = ['text', 'cuisines_offered', 'zipcode', 'avg_rating'])
+    pred = float(pipeline_serialized.predict_proba(input_df)[:,1])
+    output_string = 'This restaurant is: {:.2%} likely to pass a hygiene inspection'.format(pred)
+    return output_string
 
 
 if __name__ == '__main__':
